@@ -21,51 +21,80 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }: RegisterFormProp
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
 
-    // Basic validation
-    if (!name || !email || !password || !confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
+  // Basic validation
+  if (!name || !email || !password || !confirmPassword) {
+    toast({
+      title: "Error",
+      description: "Please fill in all fields",
+      variant: "destructive",
+    });
+    setIsLoading(false);
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    toast({
+      title: "Error",
+      description: "Passwords do not match",
+      variant: "destructive",
+    });
+    setIsLoading(false);
+    return;
+  }
+
+  if (password.length < 6) {
+    toast({
+      title: "Error",
+      description: "Password must be at least 6 characters long",
+      variant: "destructive",
+    });
+    setIsLoading(false);
+    return;
+  }
+
+  try {
+    // ✅ Call backend API
+    const res = await fetch("https://travellooker.onrender.com/api/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name, email, password }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Registration failed");
     }
 
-    if (password !== confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Passwords do not match",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
+    const data = await res.json();
 
-    if (password.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password must be at least 6 characters long",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
-
-    // Simulate API call
-    setTimeout(() => {
-      onRegister(name, email, password);
-      setIsLoading(false);
+    if (data.success) {
+      onRegister(name, email, password); 
       toast({
         title: "Welcome to TravelBooker!",
         description: "Your account has been created successfully.",
       });
-    }, 1000);
-  };
+    } else {
+      toast({
+        title: "Error",
+        description: data.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  } catch (error: any) {
+    toast({
+      title: "Error",
+      description: error.message || "Something went wrong",
+      variant: "destructive",
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">

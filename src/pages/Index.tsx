@@ -13,6 +13,9 @@ import { Plane, MapPin, Calendar, Clock, Star, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import heroImage from "@/assets/hero-travel.jpg";
 
+// Base API URL from env
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://travellooker.onrender.com";
+
 // Mock data
 const mockTravels: TravelOption[] = [
   {
@@ -85,107 +88,91 @@ const Index = () => {
     setSearchResults(mockTravels);
   }, []);
 
-const handleLogin = async (email: string, password: string) => {
-  try {
-    const response = await fetch("http://127.0.0.1:8000/accounts/login/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, password }), // or { username, password } depending on backend
-      credentials: "include", // keep cookies if using session auth
-    });
+  // Login handler
+  const handleLogin = async (email: string, password: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/accounts/login/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
+      });
 
-    if (!response.ok) {
-      throw new Error("Login failed");
+      if (!response.ok) throw new Error("Login failed");
+
+      const data = await response.json();
+      if (data.token) localStorage.setItem("token", data.token);
+
+      setCurrentUser({
+        name: data.name || "User",
+        email: data.email || email,
+      });
+      setShowLoginForm(false);
+      setActiveTab("search");
+
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully logged in.",
+      });
+    } catch (error) {
+      toast({
+        title: "Login Failed",
+        description: "Invalid credentials or server error.",
+        variant: "destructive",
+      });
     }
+  };
 
-    const data = await response.json();
+  // Register handler
+  const handleRegister = async (name: string, email: string, password: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/accounts/register/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
 
-    // if your API returns a token
-    if (data.token) {
-      localStorage.setItem("token", data.token);
+      if (!response.ok) throw new Error("Registration failed");
+
+      const data = await response.json();
+      setCurrentUser({
+        name: data.name || name,
+        email: data.email || email,
+      });
+      setShowRegisterForm(false);
+      setActiveTab("search");
+
+      toast({
+        title: "Account Created",
+        description: "Welcome aboard!",
+      });
+    } catch (error) {
+      toast({
+        title: "Registration Failed",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
     }
+  };
 
-    setCurrentUser({
-      name: data.name || "User", // adapt depending on your backend response
-      email: data.email || email,
-    });
-    setShowLoginForm(false);
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      await fetch(`${API_BASE}/accounts/logout/`, { method: "POST", credentials: "include" });
+    } catch (err) {
+      console.warn("Logout request failed", err);
+    }
+    localStorage.removeItem("token");
+    setCurrentUser(null);
     setActiveTab("search");
-
     toast({
-      title: "Welcome back!",
-      description: "You have successfully logged in.",
+      title: "Logged out",
+      description: "You have been successfully logged out.",
     });
-  } catch (error) {
-    toast({
-      title: "Login Failed",
-      description: "Invalid credentials or server error.",
-      variant: "destructive",
-    });
-  }
-};
+  };
 
-
-const handleRegister = async (name: string, email: string, password: string) => {
-  try {
-    const response = await fetch("http://127.0.0.1:8000/accounts/register/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name, email, password }),
-    });
-
-    if (!response.ok) {
-      throw new Error("Registration failed");
-    }
-
-    const data = await response.json();
-
-    setCurrentUser({
-      name: data.name || name,
-      email: data.email || email,
-    });
-    setShowRegisterForm(false);
-    setActiveTab("search");
-
-    toast({
-      title: "Account Created",
-      description: "Welcome aboard!",
-    });
-  } catch (error) {
-    toast({
-      title: "Registration Failed",
-      description: "Something went wrong. Please try again.",
-      variant: "destructive",
-    });
-  }
-};
-
-const handleLogout = async () => {
-  try {
-    await fetch("http://127.0.0.1:8000/accounts/logout/", {
-      method: "POST",
-      credentials: "include",
-    });
-  } catch (err) {
-    console.warn("Logout request failed", err);
-  }
-
-  localStorage.removeItem("token");
-  setCurrentUser(null);
-  setActiveTab("search");
-  toast({
-    title: "Logged out",
-    description: "You have been successfully logged out.",
-  });
-};
-
-
+  // Search handler
   const handleSearch = (filters: any) => {
-    // Mock search - filter existing results
     const filtered = mockTravels.filter(travel => {
       return (!filters.type || travel.type === filters.type) &&
              (!filters.source || travel.source === filters.source) &&
@@ -193,13 +180,14 @@ const handleLogout = async () => {
              (!filters.date || travel.date === filters.date);
     });
     setSearchResults(filtered);
-    
+
     toast({
       title: "Search Results",
       description: `Found ${filtered.length} travel options`,
     });
   };
 
+  // Booking handlers
   const handleBookTravel = (travel: TravelOption) => {
     if (!currentUser) {
       setShowLoginForm(true);
@@ -231,28 +219,25 @@ const handleLogout = async () => {
 
   const handleCancelBooking = (bookingId: string) => {
     setUserBookings(prev => 
-      prev.map(booking => 
-        booking.id === bookingId 
-          ? { ...booking, status: 'cancelled' as const }
-          : booking
+      prev.map(booking => booking.id === bookingId 
+        ? { ...booking, status: 'cancelled' as const }
+        : booking
       )
     );
-    
+
     toast({
       title: "Booking Cancelled",
       description: "Your booking has been cancelled successfully.",
     });
   };
 
+  // Hero section
   const renderHeroSection = () => (
     <section className="relative h-[70vh] flex items-center justify-center overflow-hidden">
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${heroImage})` }}
-      >
+      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+           style={{ backgroundImage: `url(${heroImage})` }}>
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30"></div>
       </div>
-      
       <div className="relative z-10 text-center text-white max-w-4xl px-4">
         <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-float">
           Discover Your Next
@@ -265,14 +250,12 @@ const handleLogout = async () => {
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           <Button variant="hero" size="xl" onClick={() => setActiveTab("search")}>
-            <MapPin className="mr-2 h-5 w-5" />
-            Start Your Journey
+            <MapPin className="mr-2 h-5 w-5" /> Start Your Journey
           </Button>
           {!currentUser && (
-            <Button variant="outline" size="xl" onClick={() => setShowRegisterForm(true)} 
+            <Button variant="outline" size="xl" onClick={() => setShowRegisterForm(true)}
                     className="border-white text-black hover:bg-white hover:text-blue-600">
-              <Star className="mr-2 h-5 w-5" />
-              Join TravelBooker
+              <Star className="mr-2 h-5 w-5" /> Join TravelBooker
             </Button>
           )}
         </div>
@@ -280,14 +263,13 @@ const handleLogout = async () => {
     </section>
   );
 
+  // Tabs
   const renderSearchTab = () => (
     <div className="space-y-8">
       {!currentUser && renderHeroSection()}
-      
       <div className="container mx-auto px-4">
         <TravelSearchForm onSearch={handleSearch} />
-        
-        {searchResults.length > 0 && (
+        {searchResults.length > 0 ? (
           <div className="mt-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">Available Travels</h2>
@@ -295,20 +277,13 @@ const handleLogout = async () => {
                 {searchResults.length} options found
               </Badge>
             </div>
-            
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-1">
-              {searchResults.map((travel) => (
-                <TravelCard
-                  key={travel.id}
-                  travel={travel}
-                  onBook={handleBookTravel}
-                />
+              {searchResults.map(travel => (
+                <TravelCard key={travel.id} travel={travel} onBook={handleBookTravel} />
               ))}
             </div>
           </div>
-        )}
-
-        {searchResults.length === 0 && (
+        ) : (
           <Card className="mt-8 text-center py-12">
             <CardContent>
               <Globe className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -326,15 +301,10 @@ const handleLogout = async () => {
   const renderBookingsTab = () => (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">My Bookings</h1>
-      
       {userBookings.length > 0 ? (
         <div className="space-y-6">
-          {userBookings.map((booking) => (
-            <BookingCard
-              key={booking.id}
-              booking={booking}
-              onCancel={handleCancelBooking}
-            />
+          {userBookings.map(booking => (
+            <BookingCard key={booking.id} booking={booking} onCancel={handleCancelBooking} />
           ))}
         </div>
       ) : (
@@ -345,9 +315,7 @@ const handleLogout = async () => {
             <p className="text-muted-foreground mb-4">
               Start exploring and book your first travel adventure
             </p>
-            <Button variant="travel" onClick={() => setActiveTab("search")}>
-              Browse Travels
-            </Button>
+            <Button variant="travel" onClick={() => setActiveTab("search")}>Browse Travels</Button>
           </CardContent>
         </Card>
       )}
@@ -357,7 +325,6 @@ const handleLogout = async () => {
   const renderProfileTab = () => (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Profile</h1>
-      
       {currentUser ? (
         <Card className="max-w-md">
           <CardContent className="pt-6">
@@ -381,9 +348,7 @@ const handleLogout = async () => {
         <Card className="text-center py-12">
           <CardContent>
             <p className="text-muted-foreground mb-4">Please log in to view your profile</p>
-            <Button variant="travel" onClick={() => setShowLoginForm(true)}>
-              Log In
-            </Button>
+            <Button variant="travel" onClick={() => setShowLoginForm(true)}>Log In</Button>
           </CardContent>
         </Card>
       )}
@@ -411,10 +376,7 @@ const handleLogout = async () => {
       {showLoginForm && (
         <LoginForm
           onLogin={handleLogin}
-          onSwitchToRegister={() => {
-            setShowLoginForm(false);
-            setShowRegisterForm(true);
-          }}
+          onSwitchToRegister={() => { setShowLoginForm(false); setShowRegisterForm(true); }}
           onClose={() => setShowLoginForm(false)}
         />
       )}
@@ -422,10 +384,7 @@ const handleLogout = async () => {
       {showRegisterForm && (
         <RegisterForm
           onRegister={handleRegister}
-          onSwitchToLogin={() => {
-            setShowRegisterForm(false);
-            setShowLoginForm(true);
-          }}
+          onSwitchToLogin={() => { setShowRegisterForm(false); setShowLoginForm(true); }}
           onClose={() => setShowRegisterForm(false)}
         />
       )}

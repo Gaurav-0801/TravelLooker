@@ -19,31 +19,61 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose }: LoginFormProps) => 
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
 
-    // Basic validation
-    if (!email || !password) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
+  // Basic validation
+  if (!email || !password) {
+    toast({
+      title: "Error",
+      description: "Please fill in all fields",
+      variant: "destructive",
+    });
+    setIsLoading(false);
+    return;
+  }
+
+  try {
+    // ✅ Call backend API
+    const res = await fetch("https://travellooker.onrender.com/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Invalid credentials");
     }
 
-    // Simulate API call
-    setTimeout(() => {
-      onLogin(email, password);
-      setIsLoading(false);
+    const data = await res.json();
+
+    // Example: assuming backend returns { success: true, user: {...} }
+    if (data.success) {
+      onLogin(email, password); // Or pass user data if needed
       toast({
         title: "Welcome back!",
         description: "You have successfully logged in.",
       });
-    }, 1000);
-  };
+    } else {
+      toast({
+        title: "Login failed",
+        description: data.message || "Invalid credentials",
+        variant: "destructive",
+      });
+    }
+  } catch (error: any) {
+    toast({
+      title: "Error",
+      description: error.message || "Something went wrong",
+      variant: "destructive",
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
