@@ -63,19 +63,18 @@ TEMPLATES = [
 WSGI_APPLICATION = 'travel_booking.wsgi.application'
 
 # Database - MySQL Configuration
+# Database - PostgreSQL Configuration for Render
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
+        'ENGINE': 'django.db.backends.postgresql',
         'NAME': config('DB_NAME', default='travel_booking_db'),
-        'USER': config('DB_USER', default='root'),
+        'USER': config('DB_USER', default='postgres'),
         'PASSWORD': config('DB_PASSWORD', default='password'),
         'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='3306'),
-        'OPTIONS': {
-            'sql_mode': 'traditional',
-        }
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
+
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
