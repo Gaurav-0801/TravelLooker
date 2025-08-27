@@ -85,34 +85,104 @@ const Index = () => {
     setSearchResults(mockTravels);
   }, []);
 
-  const handleLogin = (email: string, password: string) => {
-    // Mock login
+const handleLogin = async (email: string, password: string) => {
+  try {
+    const response = await fetch("http://127.0.0.1:8000/accounts/login/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }), // or { username, password } depending on backend
+      credentials: "include", // keep cookies if using session auth
+    });
+
+    if (!response.ok) {
+      throw new Error("Login failed");
+    }
+
+    const data = await response.json();
+
+    // if your API returns a token
+    if (data.token) {
+      localStorage.setItem("token", data.token);
+    }
+
     setCurrentUser({
-      name: "John Doe",
-      email: email
+      name: data.name || "User", // adapt depending on your backend response
+      email: data.email || email,
     });
     setShowLoginForm(false);
     setActiveTab("search");
-  };
 
-  const handleRegister = (name: string, email: string, password: string) => {
-    // Mock registration
+    toast({
+      title: "Welcome back!",
+      description: "You have successfully logged in.",
+    });
+  } catch (error) {
+    toast({
+      title: "Login Failed",
+      description: "Invalid credentials or server error.",
+      variant: "destructive",
+    });
+  }
+};
+
+
+const handleRegister = async (name: string, email: string, password: string) => {
+  try {
+    const response = await fetch("http://127.0.0.1:8000/accounts/register/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name, email, password }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Registration failed");
+    }
+
+    const data = await response.json();
+
     setCurrentUser({
-      name: name,
-      email: email
+      name: data.name || name,
+      email: data.email || email,
     });
     setShowRegisterForm(false);
     setActiveTab("search");
-  };
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setActiveTab("search");
     toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
+      title: "Account Created",
+      description: "Welcome aboard!",
     });
-  };
+  } catch (error) {
+    toast({
+      title: "Registration Failed",
+      description: "Something went wrong. Please try again.",
+      variant: "destructive",
+    });
+  }
+};
+
+const handleLogout = async () => {
+  try {
+    await fetch("http://127.0.0.1:8000/accounts/logout/", {
+      method: "POST",
+      credentials: "include",
+    });
+  } catch (err) {
+    console.warn("Logout request failed", err);
+  }
+
+  localStorage.removeItem("token");
+  setCurrentUser(null);
+  setActiveTab("search");
+  toast({
+    title: "Logged out",
+    description: "You have been successfully logged out.",
+  });
+};
+
 
   const handleSearch = (filters: any) => {
     // Mock search - filter existing results
