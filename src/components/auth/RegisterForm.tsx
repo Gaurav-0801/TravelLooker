@@ -7,10 +7,10 @@ import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface RegisterFormProps {
-  onRegister: (username: string, email: string, password: string) => void;
+  onRegister: (username: string, email: string, password: string, passwordConfirm: string) => void;
   onSwitchToLogin: () => void;
   onClose: () => void;
-}
+} 
 
 const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }: RegisterFormProps) => {
   const [username, setUsername] = useState("");
@@ -80,7 +80,7 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }: RegisterFormProp
         title: "Welcome to TravelBooker!",
         description: "Your account has been created successfully.",
       });
-      onRegister(username, email, password);
+      onRegister(username, email, password, passwordConfirm);
     } catch (error: any) {
       toast({
         title: "Error",

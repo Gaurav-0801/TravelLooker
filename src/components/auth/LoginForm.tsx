@@ -36,7 +36,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   try {
     // ✅ Call backend API
-    const res = await fetch("https://travellooker.onrender.com/api/login", {
+    const res = await fetch("https://travellooker.onrender.com/api/accounts/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
