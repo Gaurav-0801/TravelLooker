@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Booking
+from bookings.models import Booking
 from travel_options.models import TravelOption
 
 class BookingSerializer(serializers.ModelSerializer):
