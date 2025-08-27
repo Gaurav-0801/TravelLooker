@@ -200,7 +200,7 @@ const Index = () => {
           </Button>
           {!currentUser && (
             <Button variant="outline" size="xl" onClick={() => setShowRegisterForm(true)} 
-                    className="border-white text-white hover:bg-white hover:text-black">
+                    className="border-white text-black hover:bg-white hover:text-blue-600">
               <Star className="mr-2 h-5 w-5" />
               Join TravelBooker
             </Button>
