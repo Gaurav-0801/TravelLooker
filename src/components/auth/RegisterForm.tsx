@@ -7,93 +7,90 @@ import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface RegisterFormProps {
-  onRegister: (name: string, email: string, password: string) => void;
+  onRegister: (username: string, email: string, password: string) => void;
   onSwitchToLogin: () => void;
   onClose: () => void;
 }
 
 const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }: RegisterFormProps) => {
-  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-  // Basic validation
-  if (!name || !email || !password || !confirmPassword) {
-    toast({
-      title: "Error",
-      description: "Please fill in all fields",
-      variant: "destructive",
-    });
-    setIsLoading(false);
-    return;
-  }
-
-  if (password !== confirmPassword) {
-    toast({
-      title: "Error",
-      description: "Passwords do not match",
-      variant: "destructive",
-    });
-    setIsLoading(false);
-    return;
-  }
-
-  if (password.length < 6) {
-    toast({
-      title: "Error",
-      description: "Password must be at least 6 characters long",
-      variant: "destructive",
-    });
-    setIsLoading(false);
-    return;
-  }
-
-  try {
-    // ✅ Call backend API
-    const res = await fetch("https://travellooker.onrender.com/api/accounts/register/", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ name, email, password }),
-});
-
-
-    if (!res.ok) {
-      throw new Error("Registration failed");
+    if (!username || !email || !password || !passwordConfirm) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
     }
 
-    const data = await res.json();
+    if (password !== passwordConfirm) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
 
-    if (data.success) {
-      onRegister(name, email, password); 
+    if (password.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        "https://travellooker.onrender.com/api/accounts/register/", // trailing slash is important
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username,
+            email,
+            password,
+            password_confirm: passwordConfirm,
+          }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Registration failed");
+      }
+
       toast({
         title: "Welcome to TravelBooker!",
         description: "Your account has been created successfully.",
       });
-    } else {
+      onRegister(username, email, password);
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: data.message || "Something went wrong",
+        description: error.message || "Something went wrong",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error: any) {
-    toast({
-      title: "Error",
-      description: error.message || "Something went wrong",
-      variant: "destructive",
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
@@ -112,15 +109,15 @@ const handleSubmit = async (e: React.FormEvent) => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="username">Username</Label>
               <div className="relative">
                 <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="name"
+                  id="username"
                   type="text"
-                  placeholder="Enter your full name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="pl-10"
                   required
                 />
@@ -142,7 +139,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
@@ -176,30 +173,22 @@ const handleSubmit = async (e: React.FormEvent) => {
                   id="confirmPassword"
                   type={showPassword ? "text" : "password"}
                   placeholder="Confirm your password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  value={passwordConfirm}
+                  onChange={(e) => setPasswordConfirm(e.target.value)}
                   className="pl-10"
                   required
                 />
               </div>
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full" 
-              variant="travel"
-              disabled={isLoading}
-            >
+            <Button type="submit" className="w-full" variant="travel" disabled={isLoading}>
               {isLoading ? "Creating Account..." : "Create Account"}
             </Button>
           </form>
 
           <div className="mt-4 text-center text-sm">
             Already have an account?{" "}
-            <button
-              onClick={onSwitchToLogin}
-              className="text-primary hover:underline font-medium"
-            >
+            <button onClick={onSwitchToLogin} className="text-primary hover:underline font-medium">
               Sign in here
             </button>
           </div>
