@@ -11,4 +11,5 @@ Pillow==10.0.0
 gunicorn
 psycopg[binary]
 dj-database-url==2.3.0
+django-cors-headers==4.0.0
 whitenoise==6.7.0
