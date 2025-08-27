@@ -10,3 +10,4 @@ python-decouple==3.8
 Pillow==10.0.0
 gunicorn
 psycopg[binary]
+dj-database-url==2.3.0
