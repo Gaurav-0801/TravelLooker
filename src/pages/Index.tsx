@@ -124,43 +124,36 @@ const Index = () => {
   };
 
   // Register handler
-// Register handler
-const handleRegister = async (username: string, email: string, password: string, passwordConfirm: string) => {
-  try {
-    const response = await fetch(`${API_BASE}/accounts/register/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        username, 
-        email, 
-        password, 
-        password_confirm: passwordConfirm 
-      }),
-    });
+  const handleRegister = async (name: string, email: string, password: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/accounts/register/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
 
-    if (!response.ok) throw new Error("Registration failed");
+      if (!response.ok) throw new Error("Registration failed");
 
-    const data = await response.json();
-    setCurrentUser({
-      name: data.user.username, // match backend
-      email: data.user.email,
-    });
-    setShowRegisterForm(false);
-    setActiveTab("search");
+      const data = await response.json();
+      setCurrentUser({
+        name: data.name || name,
+        email: data.email || email,
+      });
+      setShowRegisterForm(false);
+      setActiveTab("search");
 
-    toast({
-      title: "Account Created",
-      description: "Welcome aboard!",
-    });
-  } catch (error) {
-    toast({
-      title: "Registration Failed",
-      description: "Something went wrong. Please try again.",
-      variant: "destructive",
-    });
-  }
-};
-
+      toast({
+        title: "Account Created",
+        description: "Welcome aboard!",
+      });
+    } catch (error) {
+      toast({
+        title: "Registration Failed",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Logout handler
   const handleLogout = async () => {
