@@ -83,102 +83,116 @@ const Index = () => {
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const { toast } = useToast();
 
-  // Initialize with mock data
+  // Initialize mock data
   useEffect(() => {
     setSearchResults(mockTravels);
   }, []);
 
-  // Login handler
+  // -----------------------------
+  // LOGIN HANDLER
+  // -----------------------------
   const handleLogin = async (email: string, password: string) => {
     try {
-      const response = await fetch(`${API_BASE}/accounts/login/`, {
+      const res = await fetch(`${API_BASE}/accounts/login/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
-        credentials: "include",
       });
 
-      if (!response.ok) throw new Error("Login failed");
+      if (!res.ok) throw new Error("Login failed");
 
-      const data = await response.json();
+      const data = await res.json();
+
+      // Ensure your backend returns user object as { user: { username, email }, token }
+      setCurrentUser({
+        name: data.user.username,
+        email: data.user.email,
+      });
+
       if (data.token) localStorage.setItem("token", data.token);
 
-      setCurrentUser({
-        name: data.name || "User",
-        email: data.email || email,
-      });
       setShowLoginForm(false);
-      setActiveTab("search");
+      setActiveTab("search"); // Keep user on search tab
 
       toast({
         title: "Welcome back!",
         description: "You have successfully logged in.",
       });
-    } catch (error) {
+    } catch (err: any) {
       toast({
         title: "Login Failed",
-        description: "Invalid credentials or server error.",
+        description: err.message || "Invalid credentials",
         variant: "destructive",
       });
     }
   };
 
-  // Register handler
-// Register handler
-const handleRegister = async (username: string, email: string, password: string, passwordConfirm: string) => {
-  try {
-    const response = await fetch(`${API_BASE}/accounts/register/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        username, 
-        email, 
-        password, 
-        password_confirm: passwordConfirm 
-      }),
-    });
+  // -----------------------------
+  // REGISTER HANDLER
+  // -----------------------------
+  const handleRegister = async (username: string, email: string, password: string, passwordConfirm: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/accounts/register/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          username, 
+          email, 
+          password, 
+          password_confirm: passwordConfirm 
+        }),
+      });
 
-    if (!response.ok) throw new Error("Registration failed");
+      if (!res.ok) throw new Error("Registration failed");
 
-    const data = await response.json();
-    setCurrentUser({
-      name: data.user.username, // match backend
-      email: data.user.email,
-    });
-    setShowRegisterForm(false);
-    setActiveTab("search");
+      const data = await res.json();
 
-    toast({
-      title: "Account Created",
-      description: "Welcome aboard!",
-    });
-  } catch (error) {
-    toast({
-      title: "Registration Failed",
-      description: "Something went wrong. Please try again.",
-      variant: "destructive",
-    });
-  }
-};
+      setCurrentUser({
+        name: data.user.username,
+        email: data.user.email,
+      });
 
+      if (data.token) localStorage.setItem("token", data.token);
 
-  // Logout handler
+      setShowRegisterForm(false);
+      setActiveTab("search"); // Show search tab after signup
+
+      toast({
+        title: "Account Created",
+        description: "Welcome aboard!",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Registration Failed",
+        description: err.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // -----------------------------
+  // LOGOUT HANDLER
+  // -----------------------------
   const handleLogout = async () => {
     try {
-      await fetch(`${API_BASE}/accounts/logout/`, { method: "POST", credentials: "include" });
+      await fetch(`${API_BASE}/accounts/logout/`, { method: "POST" });
     } catch (err) {
-      console.warn("Logout request failed", err);
+      console.warn("Logout failed", err);
     }
+
     localStorage.removeItem("token");
     setCurrentUser(null);
     setActiveTab("search");
+
     toast({
       title: "Logged out",
       description: "You have been successfully logged out.",
     });
   };
 
-  // Search handler
+  // -----------------------------
+  // SEARCH HANDLER
+  // -----------------------------
   const handleSearch = (filters: any) => {
     const filtered = mockTravels.filter(travel => {
       return (!filters.type || travel.type === filters.type) &&
@@ -194,7 +208,9 @@ const handleRegister = async (username: string, email: string, password: string,
     });
   };
 
-  // Booking handlers
+  // -----------------------------
+  // BOOKING HANDLERS
+  // -----------------------------
   const handleBookTravel = (travel: TravelOption) => {
     if (!currentUser) {
       setShowLoginForm(true);
@@ -238,42 +254,48 @@ const handleRegister = async (username: string, email: string, password: string,
     });
   };
 
-  // Hero section
+  // -----------------------------
+  // RENDER HERO SECTION
+  // -----------------------------
   const renderHeroSection = () => (
-    <section className="relative h-[70vh] flex items-center justify-center overflow-hidden">
-      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-           style={{ backgroundImage: `url(${heroImage})` }}>
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30"></div>
-      </div>
-      <div className="relative z-10 text-center text-white max-w-4xl px-4">
-        <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-float">
-          Discover Your Next
-          <span className="block bg-gradient-to-r from-blue-400 to-orange-400 bg-clip-text text-transparent">
-            Adventure
-          </span>
-        </h1>
-        <p className="text-xl md:text-2xl mb-8 text-white/90">
-          Book flights, trains, and buses to destinations worldwide with the best prices guaranteed
-        </p>
-        <div className="flex flex-wrap justify-center gap-4">
-          <Button variant="hero" size="xl" onClick={() => setActiveTab("search")}>
-            <MapPin className="mr-2 h-5 w-5" /> Start Your Journey
-          </Button>
-          {!currentUser && (
-            <Button variant="outline" size="xl" onClick={() => setShowRegisterForm(true)}
-                    className="border-white text-black hover:bg-white hover:text-blue-600">
-              <Star className="mr-2 h-5 w-5" /> Join TravelBooker
-            </Button>
-          )}
+    !currentUser && (
+      <section className="relative h-[70vh] flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+             style={{ backgroundImage: `url(${heroImage})` }}>
+          <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30"></div>
         </div>
-      </div>
-    </section>
+        <div className="relative z-10 text-center text-white max-w-4xl px-4">
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-float">
+            Discover Your Next
+            <span className="block bg-gradient-to-r from-blue-400 to-orange-400 bg-clip-text text-transparent">
+              Adventure
+            </span>
+          </h1>
+          <p className="text-xl md:text-2xl mb-8 text-white/90">
+            Book flights, trains, and buses to destinations worldwide with the best prices guaranteed
+          </p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Button variant="hero" size="xl" onClick={() => setActiveTab("search")}>
+              <MapPin className="mr-2 h-5 w-5" /> Start Your Journey
+            </Button>
+            {!currentUser && (
+              <Button variant="outline" size="xl" onClick={() => setShowRegisterForm(true)}
+                      className="border-white text-black hover:bg-white hover:text-blue-600">
+                <Star className="mr-2 h-5 w-5" /> Join TravelBooker
+              </Button>
+            )}
+          </div>
+        </div>
+      </section>
+    )
   );
 
-  // Tabs
+  // -----------------------------
+  // RENDER TABS
+  // -----------------------------
   const renderSearchTab = () => (
     <div className="space-y-8">
-      {!currentUser && renderHeroSection()}
+      {renderHeroSection()}
       <div className="container mx-auto px-4">
         <TravelSearchForm onSearch={handleSearch} />
         {searchResults.length > 0 ? (
