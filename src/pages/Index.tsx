@@ -105,9 +105,9 @@ const Index = () => {
 
       // Ensure your backend returns user object as { user: { username, email }, token }
       setCurrentUser({
-        name: data.user.username,
-        email: data.user.email,
-      });
+  name: data.user?.username || data.username || "User",
+  email: data.user?.email || data.email || email,
+});
 
       if (data.token) localStorage.setItem("token", data.token);
 
