@@ -7,7 +7,7 @@ import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface LoginFormProps {
-  onLogin: (user: { name: string; email: string }) => void; // <-- must pass user object
+  onLogin: (user: { name: string; email: string }, token: string) => void;
   onSwitchToRegister: () => void;
   onClose: () => void;
 }
@@ -34,42 +34,31 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose }: LoginFormProps) => 
     }
 
     try {
-      const res = await fetch("https://travellooker.onrender.com/api/accounts/login/", { // <-- ensure trailing slash
+      const res = await fetch("https://travellooker.onrender.com/api/accounts/login/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
-      if (!res.ok) {
-        throw new Error("Invalid credentials");
-      }
+      if (!res.ok) throw new Error("Invalid credentials");
 
       const data = await res.json();
 
-      // Pass the actual user object returned by your backend
-      // Example: { success: true, user: { username: "...", email: "..." } }
-      if (data.user) {
-        onLogin({
-          name: data.user.username || "User",
-          email: data.user.email,
-        });
+      // data.user + data.token
+      onLogin(
+        { name: data.user.username, email: data.user.email },
+        data.token
+      );
 
-        toast({
-          title: "Welcome back!",
-          description: "You have successfully logged in.",
-        });
-      } else {
-        toast({
-          title: "Login failed",
-          description: data.message || "Invalid credentials",
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Something went wrong",
+        title: "Welcome back!",
+        description: "You have successfully logged in.",
+      });
+      onClose(); // close modal
+    } catch (err: any) {
+      toast({
+        title: "Login failed",
+        description: err.message || "Invalid credentials",
         variant: "destructive",
       });
     } finally {
@@ -83,13 +72,10 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose }: LoginFormProps) => 
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-between">
             <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              ×
-            </Button>
+            <Button variant="ghost" size="icon" onClick={onClose}>×</Button>
           </div>
           <CardDescription>Sign in to your account to continue</CardDescription>
         </CardHeader>
-
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -140,10 +126,7 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose }: LoginFormProps) => 
 
           <div className="mt-4 text-center text-sm">
             Don't have an account?{" "}
-            <button
-              onClick={onSwitchToRegister}
-              className="text-primary hover:underline font-medium"
-            >
+            <button onClick={onSwitchToRegister} className="text-primary hover:underline font-medium">
               Sign up here
             </button>
           </div>

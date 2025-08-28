@@ -3,21 +3,20 @@ import { Button } from "@/components/ui/enhanced-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { Mail, Lock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface RegisterFormProps {
-  onRegister: (username: string, email: string, password: string, passwordConfirm: string) => void;
+  onRegister: (user: { name: string; email: string }, token: string) => void;
   onSwitchToLogin: () => void;
   onClose: () => void;
-} 
+}
 
 const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }: RegisterFormProps) => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -28,7 +27,7 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }: RegisterFormProp
     if (!username || !email || !password || !passwordConfirm) {
       toast({
         title: "Error",
-        description: "Please fill in all fields",
+        description: "All fields are required",
         variant: "destructive",
       });
       setIsLoading(false);
@@ -45,46 +44,31 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }: RegisterFormProp
       return;
     }
 
-    if (password.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password must be at least 6 characters long",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      const res = await fetch(
-        "https://travellooker.onrender.com/api/accounts/register/", // trailing slash is important
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username,
-            email,
-            password,
-            password_confirm: passwordConfirm,
-          }),
-        }
-      );
+      const res = await fetch("https://travellooker.onrender.com/api/accounts/register/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, password, password_confirm: passwordConfirm }),
+      });
+
+      if (!res.ok) throw new Error("Registration failed");
 
       const data = await res.json();
 
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Registration failed");
-      }
+      onRegister(
+        { name: data.user.username, email: data.user.email },
+        data.token
+      );
 
       toast({
-        title: "Welcome to TravelBooker!",
-        description: "Your account has been created successfully.",
+        title: "Account Created",
+        description: "Welcome aboard!",
       });
-      onRegister(username, email, password, passwordConfirm);
-    } catch (error: any) {
+      onClose();
+    } catch (err: any) {
       toast({
-        title: "Error",
-        description: error.message || "Something went wrong",
+        title: "Registration Failed",
+        description: err.message || "Something went wrong",
         variant: "destructive",
       });
     } finally {
@@ -97,14 +81,10 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }: RegisterFormProp
       <Card className="w-full max-w-md shadow-travel-lg">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl font-bold">Join TravelBooker</CardTitle>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              ×
-            </Button>
+            <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
+            <Button variant="ghost" size="icon" onClick={onClose}>×</Button>
           </div>
-          <CardDescription>
-            Create your account to start booking amazing travels
-          </CardDescription>
+          <CardDescription>Sign up to start booking travels</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -115,7 +95,7 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }: RegisterFormProp
                 <Input
                   id="username"
                   type="text"
-                  placeholder="Enter your username"
+                  placeholder="Enter username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="pl-10"
@@ -131,7 +111,7 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }: RegisterFormProp
                 <Input
                   id="email"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="Enter email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10"
@@ -146,33 +126,24 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }: RegisterFormProp
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Create a password"
+                  type="password"
+                  placeholder="Enter password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10"
+                  className="pl-10"
                   required
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1 h-8 w-8"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="passwordConfirm">Confirm Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="confirmPassword"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Confirm your password"
+                  id="passwordConfirm"
+                  type="password"
+                  placeholder="Confirm password"
                   value={passwordConfirm}
                   onChange={(e) => setPasswordConfirm(e.target.value)}
                   className="pl-10"
@@ -182,14 +153,14 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, onClose }: RegisterFormProp
             </div>
 
             <Button type="submit" className="w-full" variant="travel" disabled={isLoading}>
-              {isLoading ? "Creating Account..." : "Create Account"}
+              {isLoading ? "Creating Account..." : "Sign Up"}
             </Button>
           </form>
 
           <div className="mt-4 text-center text-sm">
             Already have an account?{" "}
             <button onClick={onSwitchToLogin} className="text-primary hover:underline font-medium">
-              Sign in here
+              Log in here
             </button>
           </div>
         </CardContent>

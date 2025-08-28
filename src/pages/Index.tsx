@@ -9,14 +9,13 @@ import BookingCard, { Booking } from "@/components/booking/BookingCard";
 import { Button } from "@/components/ui/enhanced-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Calendar, MapPin, Star } from "lucide-react";
+import { Plane, MapPin, Calendar, Clock, Star, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import heroImage from "@/assets/hero-travel.jpg";
 
-// Base API URL
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://travellooker.onrender.com";
 
-// Mock travel data
+// Mock travels
 const mockTravels: TravelOption[] = [
   {
     id: "FL001",
@@ -42,6 +41,18 @@ const mockTravels: TravelOption[] = [
     availableSeats: 24,
     operator: "Amtrak"
   },
+  {
+    id: "BS003",
+    type: "bus",
+    source: "san-francisco",
+    destination: "seattle",
+    date: "2024-09-17",
+    time: "10:00",
+    duration: "12h 30m",
+    price: 45,
+    availableSeats: 8,
+    operator: "Greyhound"
+  }
 ];
 
 interface User {
@@ -59,141 +70,194 @@ const Index = () => {
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const { toast } = useToast();
 
-  useEffect(() => setSearchResults(mockTravels), []);
+  useEffect(() => {
+    setSearchResults(mockTravels);
+  }, []);
 
-  /** LOGIN HANDLER */
-  const handleLogin = (user: User) => {
+  // ✅ Login/Signup handlers
+  const handleLoginSuccess = (user: User, token: string) => {
+    localStorage.setItem("token", token);
     setCurrentUser(user);
-    setShowLoginForm(false);
     setActiveTab("search");
-    toast({
-      title: "Welcome back!",
-      description: "You have successfully logged in.",
-    });
+    setShowLoginForm(false);
   };
 
-  /** REGISTER HANDLER */
-  const handleRegister = async (username: string, email: string, password: string, passwordConfirm: string) => {
-  try {
-    const response = await fetch(`${API_BASE}/accounts/register/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        username, 
-        email, 
-        password, 
-        password_confirm: passwordConfirm 
-      }),
-    });
-
-    if (!response.ok) throw new Error("Registration failed");
-
-    const data = await response.json();
-
-    // ✅ Save token for future requests
-    if (data.token) localStorage.setItem("token", data.token);
-
-    // ✅ Set current user using the returned "user" object
-    setCurrentUser({
-      name: data.user.username,
-      email: data.user.email,
-    });
-
-    // ✅ Close register form & switch to search tab
-    setShowRegisterForm(false);
+  const handleRegisterSuccess = (user: User, token: string) => {
+    localStorage.setItem("token", token);
+    setCurrentUser(user);
     setActiveTab("search");
+    setShowRegisterForm(false);
+  };
 
-    toast({
-      title: "Account Created",
-      description: `Welcome ${data.user.username}!`,
-    });
-  } catch (error: any) {
-    toast({
-      title: "Registration Failed",
-      description: error.message || "Something went wrong. Please try again.",
-      variant: "destructive",
-    });
-  }
-};
-
-
-  /** LOGOUT */
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch(`${API_BASE}/accounts/logout/`, { method: "POST", credentials: "include" });
+    } catch (err) {
+      console.warn("Logout failed", err);
+    }
     localStorage.removeItem("token");
     setCurrentUser(null);
     setActiveTab("search");
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    });
+    toast({ title: "Logged out", description: "You have been logged out." });
   };
 
-  /** SEARCH HANDLER */
   const handleSearch = (filters: any) => {
-    const filtered = mockTravels.filter(t =>
-      (!filters.type || t.type === filters.type) &&
-      (!filters.source || t.source === filters.source) &&
-      (!filters.destination || t.destination === filters.destination) &&
-      (!filters.date || t.date === filters.date)
-    );
-    setSearchResults(filtered);
-    toast({
-      title: "Search Results",
-      description: `Found ${filtered.length} travel options`,
+    const filtered = mockTravels.filter(travel => {
+      return (!filters.type || travel.type === filters.type) &&
+             (!filters.source || travel.source === filters.source) &&
+             (!filters.destination || travel.destination === filters.destination) &&
+             (!filters.date || travel.date === filters.date);
     });
+    setSearchResults(filtered);
+    toast({ title: "Search Results", description: `Found ${filtered.length} travel options` });
   };
 
-  /** HERO SECTION */
-  const renderHero = () => (
+  const handleBookTravel = (travel: TravelOption) => {
+    if (!currentUser) {
+      setShowLoginForm(true);
+      return;
+    }
+    setSelectedTravel(travel);
+  };
+
+  const handleConfirmBooking = (bookingData: any) => {
+    const newBooking: Booking = {
+      id: `BK${Date.now()}`,
+      travelId: bookingData.travelId,
+      type: selectedTravel!.type,
+      source: selectedTravel!.source,
+      destination: selectedTravel!.destination,
+      date: selectedTravel!.date,
+      time: selectedTravel!.time,
+      passengers: bookingData.passengers,
+      totalPrice: bookingData.totalPrice,
+      status: 'confirmed',
+      bookingDate: new Date().toISOString().split('T')[0],
+      passengerDetails: bookingData.passengerDetails
+    };
+    setUserBookings(prev => [newBooking, ...prev]);
+    setSelectedTravel(null);
+    setActiveTab("bookings");
+  };
+
+  const handleCancelBooking = (bookingId: string) => {
+    setUserBookings(prev =>
+      prev.map(booking =>
+        booking.id === bookingId ? { ...booking, status: 'cancelled' as const } : booking
+      )
+    );
+    toast({ title: "Booking Cancelled", description: "Your booking has been cancelled successfully." });
+  };
+
+  const renderHeroSection = () => (
     <section className="relative h-[70vh] flex items-center justify-center overflow-hidden">
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(${heroImage})` }}
-      >
+      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${heroImage})` }}>
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30"></div>
       </div>
       <div className="relative z-10 text-center text-white max-w-4xl px-4">
-        <h1 className="text-5xl md:text-7xl font-bold mb-6">
+        <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-float">
           Discover Your Next
           <span className="block bg-gradient-to-r from-blue-400 to-orange-400 bg-clip-text text-transparent">
             Adventure
           </span>
         </h1>
-        {!currentUser && (
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button variant="hero" size="xl" onClick={() => setActiveTab("search")}>
-              <MapPin className="mr-2 h-5 w-5" /> Start Your Journey
-            </Button>
+        <p className="text-xl md:text-2xl mb-8 text-white/90">
+          Book flights, trains, and buses worldwide
+        </p>
+        <div className="flex flex-wrap justify-center gap-4">
+          <Button variant="hero" size="xl" onClick={() => setActiveTab("search")}>
+            <MapPin className="mr-2 h-5 w-5" /> Start Your Journey
+          </Button>
+          {!currentUser && (
             <Button variant="outline" size="xl" onClick={() => setShowRegisterForm(true)}>
               <Star className="mr-2 h-5 w-5" /> Join TravelBooker
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </section>
   );
 
-  /** SEARCH TAB */
   const renderSearchTab = () => (
     <div className="space-y-8">
-      {!currentUser && renderHero()}
+      {!currentUser && renderHeroSection()}
       <div className="container mx-auto px-4">
         <TravelSearchForm onSearch={handleSearch} />
         {searchResults.length > 0 ? (
-          <div className="mt-8 grid gap-6 md:grid-cols-2">
-            {searchResults.map(t => (
-              <TravelCard key={t.id} travel={t} onBook={() => setSelectedTravel(t)} />
-            ))}
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Available Travels</h2>
+              <Badge variant="secondary" className="text-sm">{searchResults.length} options found</Badge>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-1">
+              {searchResults.map(travel => (
+                <TravelCard key={travel.id} travel={travel} onBook={handleBookTravel} />
+              ))}
+            </div>
           </div>
         ) : (
           <Card className="mt-8 text-center py-12">
             <CardContent>
               <Globe className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No travels found</h3>
+              <p className="text-muted-foreground">Try adjusting your search criteria</p>
             </CardContent>
           </Card>
         )}
       </div>
+    </div>
+  );
+
+  const renderBookingsTab = () => (
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8">My Bookings</h1>
+      {userBookings.length > 0 ? (
+        <div className="space-y-6">
+          {userBookings.map(booking => (
+            <BookingCard key={booking.id} booking={booking} onCancel={handleCancelBooking} />
+          ))}
+        </div>
+      ) : (
+        <Card className="text-center py-12">
+          <CardContent>
+            <Calendar className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No bookings yet</h3>
+            <p className="text-muted-foreground mb-4">Start exploring and book your first travel adventure</p>
+            <Button variant="travel" onClick={() => setActiveTab("search")}>Browse Travels</Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+
+  const renderProfileTab = () => (
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8">Profile</h1>
+      {currentUser ? (
+        <Card className="max-w-md">
+          <CardContent className="pt-6 space-y-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Name</label>
+              <p className="text-lg font-semibold">{currentUser.name}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Email</label>
+              <p className="text-lg">{currentUser.email}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Total Bookings</label>
+              <p className="text-lg font-semibold">{userBookings.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="text-center py-12">
+          <CardContent>
+            <p className="text-muted-foreground mb-4">Please log in to view your profile</p>
+            <Button variant="travel" onClick={() => setShowLoginForm(true)}>Log In</Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 
@@ -210,11 +274,13 @@ const Index = () => {
 
       <main>
         {activeTab === "search" && renderSearchTab()}
+        {activeTab === "bookings" && renderBookingsTab()}
+        {activeTab === "profile" && renderProfileTab()}
       </main>
 
       {showLoginForm && (
         <LoginForm
-          onLogin={handleLogin}
+          onLogin={handleLoginSuccess}
           onSwitchToRegister={() => { setShowLoginForm(false); setShowRegisterForm(true); }}
           onClose={() => setShowLoginForm(false)}
         />
@@ -222,7 +288,7 @@ const Index = () => {
 
       {showRegisterForm && (
         <RegisterForm
-          onRegister={handleRegister}
+          onRegister={handleRegisterSuccess}
           onSwitchToLogin={() => { setShowRegisterForm(false); setShowLoginForm(true); }}
           onClose={() => setShowRegisterForm(false)}
         />
@@ -231,7 +297,7 @@ const Index = () => {
       {selectedTravel && (
         <BookingModal
           travel={selectedTravel}
-          onConfirm={() => setSelectedTravel(null)}
+          onConfirm={handleConfirmBooking}
           onClose={() => setSelectedTravel(null)}
         />
       )}
