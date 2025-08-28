@@ -7,7 +7,7 @@ import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface LoginFormProps {
-  onLogin: (email: string, password: string) => void;
+  onLogin: (user: { name: string; email: string }) => void; // <-- must pass user object
   onSwitchToRegister: () => void;
   onClose: () => void;
 }
@@ -19,61 +19,63 @@ const LoginForm = ({ onLogin, onSwitchToRegister, onClose }: LoginFormProps) => 
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-  // Basic validation
-  if (!email || !password) {
-    toast({
-      title: "Error",
-      description: "Please fill in all fields",
-      variant: "destructive",
-    });
-    setIsLoading(false);
-    return;
-  }
-
-  try {
-    // ✅ Call backend API
-    const res = await fetch("https://travellooker.onrender.com/api/accounts/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (!res.ok) {
-      throw new Error("Invalid credentials");
-    }
-
-    const data = await res.json();
-
-    // Example: assuming backend returns { success: true, user: {...} }
-    if (data.success) {
-      onLogin(email, password); // Or pass user data if needed
+    if (!email || !password) {
       toast({
-        title: "Welcome back!",
-        description: "You have successfully logged in.",
-      });
-    } else {
-      toast({
-        title: "Login failed",
-        description: data.message || "Invalid credentials",
+        title: "Error",
+        description: "Please fill in all fields",
         variant: "destructive",
       });
+      setIsLoading(false);
+      return;
     }
-  } catch (error: any) {
-    toast({
-      title: "Error",
-      description: error.message || "Something went wrong",
-      variant: "destructive",
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+
+    try {
+      const res = await fetch("https://travellooker.onrender.com/api/accounts/login/", { // <-- ensure trailing slash
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Invalid credentials");
+      }
+
+      const data = await res.json();
+
+      // Pass the actual user object returned by your backend
+      // Example: { success: true, user: { username: "...", email: "..." } }
+      if (data.user) {
+        onLogin({
+          name: data.user.username || "User",
+          email: data.user.email,
+        });
+
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully logged in.",
+        });
+      } else {
+        toast({
+          title: "Login failed",
+          description: data.message || "Invalid credentials",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
@@ -85,10 +87,9 @@ const handleSubmit = async (e: React.FormEvent) => {
               ×
             </Button>
           </div>
-          <CardDescription>
-            Sign in to your account to continue
-          </CardDescription>
+          <CardDescription>Sign in to your account to continue</CardDescription>
         </CardHeader>
+
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -106,7 +107,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
@@ -132,12 +133,7 @@ const handleSubmit = async (e: React.FormEvent) => {
               </div>
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full" 
-              variant="travel"
-              disabled={isLoading}
-            >
+            <Button type="submit" className="w-full" variant="travel" disabled={isLoading}>
               {isLoading ? "Signing In..." : "Sign In"}
             </Button>
           </form>
