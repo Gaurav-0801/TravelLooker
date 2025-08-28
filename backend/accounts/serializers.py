@@ -1,7 +1,5 @@
-# accounts/serializers.py
-
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.password_validation import validate_password
 from bookings.models import Booking
 from travel_options.models import TravelOption
@@ -11,6 +9,7 @@ User = get_user_model()
 # --------------------------
 # User Serializers
 # --------------------------
+
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True)
@@ -29,31 +28,40 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         return user
 
+
 class UserLoginSerializer(serializers.Serializer):
-    username = serializers.CharField()
+    email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
-        from django.contrib.auth import authenticate
-        user = authenticate(username=attrs['username'], password=attrs['password'])
+        email = attrs.get('email')
+        password = attrs.get('password')
+        user = User.objects.filter(email=email).first()
+        if user is None:
+            raise serializers.ValidationError("User with this email does not exist.")
+        user = authenticate(username=user.username, password=password)
         if not user:
             raise serializers.ValidationError("Invalid credentials.")
         attrs['user'] = user
         return attrs
+
 
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'first_name', 'last_name')
 
+
 class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('username', 'email', 'first_name', 'last_name')
 
+
 # --------------------------
 # Booking Serializers
 # --------------------------
+
 class BookingSerializer(serializers.ModelSerializer):
     travel = serializers.CharField(source='travel_option.id', read_only=True)
 
@@ -63,6 +71,7 @@ class BookingSerializer(serializers.ModelSerializer):
             'id', 'travel', 'type', 'source', 'destination', 'date', 'time',
             'passengers', 'total_price', 'status', 'booking_date', 'passenger_details'
         )
+
 
 class BookingCreateSerializer(serializers.ModelSerializer):
     travelId = serializers.CharField(write_only=True)
@@ -93,6 +102,7 @@ class BookingCreateSerializer(serializers.ModelSerializer):
             status='CONFIRMED'
         )
         return booking
+
 
 class BookingCancelSerializer(serializers.Serializer):
     reason = serializers.CharField(required=False, allow_blank=True)
