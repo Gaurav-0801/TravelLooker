@@ -31,7 +31,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",        # MUST be at the top
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -104,14 +104,12 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_HEADERS = ["*"]
-CORS_ALLOW_METHODS = ["DELETE", "GET", "OPTIONS", "PATCH", "POST", "PUT"]
+CORS_ALLOW_CREDENTIALS = True   # allow cookies/auth tokens in requests
 
 # === CSRF ===
 CSRF_TRUSTED_ORIGINS = [
-    "https://travel-looker.vercel.app",
-    "https://travellooker.onrender.com",
+    "https://travel-looker.vercel.app",   # frontend production
+    "https://travellooker.onrender.com",  # backend production
 ]
 
 # === REST Framework ===
