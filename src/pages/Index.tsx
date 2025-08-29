@@ -169,7 +169,7 @@ const Index = () => {
             <MapPin className="mr-2 h-5 w-5" /> Start Your Journey
           </Button>
           {!currentUser && (
-            <Button variant="outline" size="xl"onClick={() => setShowRegisterForm(true)}>
+            <Button variant="outline" size="xl" text-color="black" onClick={() => setShowRegisterForm(true)}>
               <Star className="mr-2 h-5 w-5 text-black" /> Join TravelBooker
             </Button>
           )}
